@@ -1,24 +1,42 @@
-const express = require('express');
+import express from 'express';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import userRouter from './routes/user.route.js';
+import authRouter from './routes/auth.route.js';
+
+dotenv.config();
+
 const app = express();
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const AuthRouter = require('./Routes/AuthRouter');
-const ProductRouter = require('./Routes/ProductRouter');
+const PORT = process.env.PORT || 7000;
+const MONGOURL = process.env.MONGO_URL;
 
-require('dotenv').config();
-require('./Models/db');
 
-const PORT = process.env.PORT || 8000;
+mongoose.connect(MONGOURL).then(() =>{
+    console.log("Database connected")
+    app.listen(PORT, () =>{
+        console.log(`server is on port ${PORT}`);
+    });
+})
+.catch((error) => console.log(error));
 
-app.get('/ping', (req, res)=>{
-    res.send('PING');
-});
+app.use(cors({
+    origin: 'http://localhost:3000', //frontend url
+    method: ['GET', 'POST', 'PUT', 'DELETE'],
+    
+}))
 
-app.use(bodyParser.json());
-app.use(cors());
-app.use('/auth', AuthRouter);
-app.use('/products', ProductRouter);
+app.use(express.json());
 
-app.listen(PORT, ()=>{
-    console.log(`server is running on ${PORT}`);
+app.use('/user', userRouter);
+app.use('/auth', authRouter);
+
+app.use((err, req, res, next) =>{
+    const statusCode = err.statusCode || 500;
+    const message = err.message || "Internal server Error";
+    return res.status(statusCode).json({
+        success: false,
+        statusCode,
+        message,
+    });
 });
